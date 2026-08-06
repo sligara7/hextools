@@ -2,7 +2,7 @@
 
 Readback PV lists for the MCA (accelerator-side) and MCF (endstation-side)
 motion groups, ported **verbatim** from
-``hex-acq-pyepics/lib/lib_device_control.py`` (HXM-1288.F1). The legacy
+``hex-acq-pyepics/lib/lib_device_control.py``. The legacy
 scripts read every PV in a group at save time to record where each motor
 was ("stage 5" metadata); these constants preserve that inventory for the
 Bluesky-side plans.
