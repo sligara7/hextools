@@ -391,13 +391,19 @@ class PhantomArmLogic(ADArmLogic):
         ValueError
             If the number of post trigger frames recorded is not what was expected.
         """
-        # Start the acquisition, and wait for waiting for trigger to be True
+        # Start the acquisition, and wait for waiting for trigger to be True.
+        # wait_for_set_completion=False is LOAD-BEARING: Acquire is a busy
+        # record whose put-completion only fires when acquisition ENDS, so
+        # the default (True) blocks the arm against the very trigger it is
+        # arming for (found against the simulated HEX beamline's Phantom
+        # tier, 2026-08-12 — same reason ADAcquireLogic passes False).
         await set_and_wait_for_other_value(
             self.driver.acquire,
             True,
             self.driver.waiting_for_trigger,
             1,
             timeout=DEFAULT_TIMEOUT,
+            wait_for_set_completion=False,
         )
 
         # Wait for trigger_received to go to 1. If trigger_received does not go
