@@ -224,6 +224,17 @@ async def test_arm_logic_arm_success(phantom_arm_logic: PhantomArmLogic, monkeyp
     set_mock_value(
         phantom_arm_logic.driver.array_counter, 10
     )  # Matches post_trig_frames
+    # arm() now also runs the download watch (_download_and_watch), so
+    # mimic the camera ramping DownloadCount when the Download put lands.
+    set_mock_value(phantom_arm_logic.driver.download_start_frame, 0)
+    set_mock_value(phantom_arm_logic.driver.download_end_frame, 9)
+
+    def _ramp_download(value, **kw):
+        if value:
+            for i in range(1, 11):
+                set_mock_value(phantom_arm_logic.driver.download_count, i)
+
+    callback_on_mock_put(phantom_arm_logic.driver.download, _ramp_download)
 
     await phantom_arm_logic.arm()  # Should complete without exceptions
     assert await phantom_arm_logic.driver.download.get_value()
@@ -237,12 +248,13 @@ async def test_arm_logic_wait_for_idle_timeout(
     )  # Set a short timeout for the test
     set_mock_value(phantom_arm_logic.driver.download_start_frame, -5)
     set_mock_value(phantom_arm_logic.driver.download_end_frame, 5)
-    set_mock_value(phantom_arm_logic.driver.download, True)
     with pytest.raises(
         TimeoutError,
         match="Timeout waiting for download to complete! Target number of downloaded frames: 11",  # noqa: E501
     ):
-        await phantom_arm_logic.wait_for_idle()
+        # The watch (subscribe -> trigger -> count) lives in
+        # _download_and_watch; wait_for_idle now just awaits the arm task.
+        await phantom_arm_logic._download_and_watch()
 
 
 async def test_arm_logic_wait_for_idle_success(
@@ -253,7 +265,6 @@ async def test_arm_logic_wait_for_idle_success(
     )  # Set a short timeout for the test
     set_mock_value(phantom_arm_logic.driver.download_start_frame, -5)
     set_mock_value(phantom_arm_logic.driver.download_end_frame, 5)
-    set_mock_value(phantom_arm_logic.driver.download, True)
 
     # Simulate frames being downloaded by incrementing download_count
     async def _simulate_download():
@@ -266,7 +277,8 @@ async def test_arm_logic_wait_for_idle_success(
 
     download_task = asyncio.create_task(_simulate_download())
     try:
-        await phantom_arm_logic.wait_for_idle()  # Should complete without exceptions
+        # Should complete without exceptions (triggers its own download)
+        await phantom_arm_logic._download_and_watch()
     finally:
         download_task.cancel()
 
