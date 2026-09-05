@@ -46,7 +46,7 @@ class SingleAxisFlyableLogic(FlyableLogic[SingleAxisFlyscanInfo, None]):
     def __init__(self, panda: CommonPandaBlocks) -> None:
         self.panda = panda
 
-    async def prepare(self, value: SingleAxisFlyscanInfo):
+    async def on_prepare(self, value: SingleAxisFlyscanInfo) -> None:
         pcomp = self.panda.pcomp[1]
         pulse = self.panda.pulse[1]
         coros = [
@@ -79,11 +79,12 @@ class SingleAxisFlyableLogic(FlyableLogic[SingleAxisFlyscanInfo, None]):
             )
         await asyncio.gather(*coros)
 
-    async def kickoff(self) -> None:
+    async def on_kickoff(self, ctx: None) -> None:
         await wait_for_value(self.panda.pcomp[1].active, True, timeout=1)
+        return ctx
 
-    async def complete(self, timeout: float | None = None) -> None:
-        await wait_for_value(self.panda.pcomp[1].active, False, timeout=timeout)
+    async def on_complete(self, ctx: None) -> None:
+        await wait_for_value(self.panda.pcomp[1].active, False, timeout=None)
 
     async def stop(self):
         await wait_for_value(self.panda.pcomp[1].active, False, timeout=1)

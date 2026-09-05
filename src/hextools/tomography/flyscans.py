@@ -1,7 +1,7 @@
 """Tomography plans for HEX beamline."""
 
 from bluesky import plan_stubs as bps
-from ophyd_async.core import DetectorTrigger, StandardFlyable, TriggerInfo
+from ophyd_async.core import DetectorTrigger, TriggerInfo
 from ophyd_async.epics.adkinetix import KinetixDetector
 from ophyd_async.fastcs.panda import HDFPanda
 
@@ -56,7 +56,9 @@ def tomo_flyscan(
     all_detectors = [*detectors, panda]
 
     # Construct ephemeral flyer for the single axis flyscan
-    single_axis_panda_flyer = StandardFlyable(SingleAxisFlyableLogic(panda))
+    single_axis_panda_flyer = SingleAxisFlyableLogic(panda).with_device(
+        "single_axis_panda_flyer"
+    )
     all_devices = [*all_detectors, single_axis_panda_flyer, motor]
 
     # Get the start position in encoder counts
