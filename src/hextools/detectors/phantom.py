@@ -387,6 +387,15 @@ class PhantomAcquireLogic(ADAcquireLogic):
             timeout=DEFAULT_TIMEOUT,
         )
 
+        # In FREE-RUN the camera exposes on its own clock, but nothing is
+        # recorded as a cine until an EVENT trigger arrives, and with no PandA
+        # the only source of that event is the software trigger - so send it
+        # now that the camera reports it is waiting. In FSYNC the PandA supplies
+        # the event together with the frame pulses, so nothing is sent here.
+        ext_sync_type = await self.driver.ext_sync_type.get_value()
+        if ext_sync_type == PhantomExtSyncType.FREE_RUN:
+            await self.driver.send_software_trigger.set(1)
+
         # Wait for trigger_received to go to 1. If trigger_received does not go
         # to 1 within the timeout, check if acquisition stopped, and if so raise
         # a timeout error indicating acquisition stopped while waiting for trigger.

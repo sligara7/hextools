@@ -23,6 +23,7 @@ import hextools.detectors.phantom
 from hextools.detectors.phantom import (
     PhantomAcquireLogic,
     PhantomDetector,
+    PhantomExtSyncType,
     PhantomIO,
     PhantomPixelDataFormat,
     PhantomTriggerLogic,
@@ -232,6 +233,74 @@ async def test_arm_logic_arm_success(
 
     await phantom_arm_logic.start_acquiring()  # Should complete without exceptions
     assert await phantom_arm_logic.driver.download.get_value()
+
+
+async def test_arm_logic_free_run_sends_software_trigger(
+    phantom_arm_logic: PhantomAcquireLogic, monkeypatch
+):
+    """In FREE-RUN the camera exposes on its own clock, but the recording is only
+    defined by an EVENT trigger. With no PandA the only source of that event is
+    the software trigger, so the arm must send it. Found at HEX 2026-09-09: a
+    bare ``bp.count([phantom])`` armed the camera and then waited forever
+    ("Recording frames into Cine", trigger-received bit clear, no download).
+    The mock camera here only reports a trigger when one is actually sent.
+    """
+    monkeypatch.setattr(hextools.detectors.phantom, "DEFAULT_TIMEOUT", 0.1)
+    driver = phantom_arm_logic.driver
+
+    set_mock_value(driver.ext_sync_type, PhantomExtSyncType.FREE_RUN)
+    set_mock_value(driver.waiting_for_trigger, 1)
+    set_mock_value(driver.post_trig_frames, 10)
+    set_mock_value(driver.complete_and_valid, 1)
+    # No event yet: the camera is waiting, exactly as observed on the beamline
+    set_mock_value(driver.trigger_received, 0)
+    set_mock_value(driver.array_counter, 0)
+
+    software_triggers: list[int] = []
+
+    def _on_software_trigger(value, **kwargs):
+        # What the real camera does on a "trig" command: the event is received
+        # and the post-trigger frames get recorded.
+        software_triggers.append(value)
+        set_mock_value(driver.trigger_received, 1)
+        set_mock_value(driver.array_counter, 10)
+
+    callback_on_mock_put(driver.send_software_trigger, _on_software_trigger)
+
+    # Bounded so the unfixed arm (which loops waiting for an event that never
+    # comes) fails in seconds instead of hanging to the pytest timeout.
+    await asyncio.wait_for(phantom_arm_logic.start_acquiring(), timeout=2.0)
+
+    assert software_triggers == [1]
+    assert await driver.download.get_value()
+
+
+async def test_arm_logic_fsync_does_not_send_software_trigger(
+    phantom_arm_logic: PhantomAcquireLogic, monkeypatch
+):
+    """In FSYNC (external edge) the PandA supplies the event with the frame
+    pulses; the arm must NOT inject a software trigger on top of it."""
+    monkeypatch.setattr(hextools.detectors.phantom, "DEFAULT_TIMEOUT", 0.1)
+    driver = phantom_arm_logic.driver
+
+    set_mock_value(driver.ext_sync_type, PhantomExtSyncType.FSYNC)
+    set_mock_value(driver.waiting_for_trigger, 1)
+    set_mock_value(driver.post_trig_frames, 10)
+    set_mock_value(driver.complete_and_valid, 1)
+    # The external event has arrived (PandA), frames recorded
+    set_mock_value(driver.trigger_received, 1)
+    set_mock_value(driver.array_counter, 10)
+
+    software_triggers: list[int] = []
+    callback_on_mock_put(
+        driver.send_software_trigger,
+        lambda value, **kwargs: software_triggers.append(value),
+    )
+
+    await asyncio.wait_for(phantom_arm_logic.start_acquiring(), timeout=2.0)
+
+    assert software_triggers == []
+    assert await driver.download.get_value()
 
 
 async def test_arm_logic_wait_for_idle_timeout(
