@@ -15,6 +15,7 @@ from nslsii.utils import open_redis_client
 from ophyd_async.core import (
     Device,
     DeviceProcessor,
+    DeviceVector,
     NotConnectedError,
     wait_for_connection,
 )
@@ -199,3 +200,57 @@ def auto_init_devices(timeout: float = 1.0, verbose: bool = False) -> DeviceProc
             console.print("\n".join(f"{name}: {reason}" for name, reason in reasons.items()) if reasons else "")
 
     return DeviceProcessor(_process_devices)
+
+
+PIPE = "│"
+ELBOW = "└──"
+TEE = "├──"
+PIPE_PREFIX = "│   "
+SPACE_PREFIX = "    "
+
+
+def _get_children(device: Device) -> list[tuple[str, Device]]:
+    """
+    Supplementary method for building the tree view of a device.
+    Return the (name, child) pairs of a device, sorted for display.
+    """
+    children = [
+        (name, child) for name, child in device.children() if isinstance(child, Device)
+    ]
+    if isinstance(device, DeviceVector):
+        # DeviceVector children are stringified integer indices.
+        return sorted(children, key=lambda item: int(item[0]))
+    return sorted(children, key=lambda item: item[0])
+
+
+def _make_tree_body(tree: list[str], device: Device, prefix=""):
+    """
+    Supplementary method for building the tree view of a device.
+    Create the tree body.
+    """
+    entries = _get_children(device)
+    last_index = len(entries) - 1
+    for index, (name, child) in enumerate(entries):
+        if index == 0:
+            tree.append(prefix + PIPE)
+        connector = ELBOW if index == last_index else TEE
+        tree.append(f"{prefix}{connector} {name}")
+        child_prefix = prefix + (
+            SPACE_PREFIX if index == last_index else PIPE_PREFIX
+        )
+        _make_tree_body(tree, child, prefix=child_prefix)
+
+
+def print_device_tree(device: Device, indent: int = 0) -> None:
+    """Print the device tree for a given device.
+
+    Parameters
+    ----------
+    device : Device
+        The device whose tree is to be printed.
+    indent : int
+        The indentation level for the current device.
+    """
+    x = []
+    _make_tree_body(x, device)
+    print("\n".join(x))

@@ -141,10 +141,10 @@ with auto_init_devices(timeout=1.0):
     )
     wide_fov_camera = FOV_20_40_mm_Camera("XF:27IDF-OP:1{OPT:2-Ax:", name="wide_fov_camera")
 
-    phantom1 = PhantomDetector(
+    phantom = PhantomDetector(
         "XF:27ID1-ES{Phantom-Det:1}",
         ADWriterFactory.hdf(path_provider),
-        name="phantom1",
+        name="phantom",
     )
 
     # TODO: Re-install with ADVimba
@@ -198,14 +198,14 @@ perkin_elmer._name = "perkin-elmer"
 # RE.install_suspender(SuspendFloor(storage_ring.beam_current, 100, resume_thresh=390))
 
 # Configure baseline supplemental data to include in the metadata of every run.
-sd = bpp.SupplementalData(
-    baseline=[
-        storage_ring.beam_current,
-        wb_slits,
-        pb_slits,
-        sample_tower,
-        #dclm,
-        optics_table,
-    ]
-)
-RE.preprocessors.append(sd)
+# sd = bpp.SupplementalData(
+#     baseline=[
+#         storage_ring.beam_current,
+#         wb_slits,
+#         pb_slits,
+#         sample_tower,
+#         #dclm,
+#         optics_table,
+#     ]
+# )
+# RE.preprocessors.append(sd)
