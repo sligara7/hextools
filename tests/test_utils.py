@@ -51,6 +51,27 @@ async def test_auto_init_devices_preserves_dash_in_name(monkeypatch):
     assert motor.velocity.name == "my-motor_velocity"
 
 
+async def test_auto_init_devices_keeps_explicit_name(monkeypatch):
+    """A device constructed with ``name=`` keeps it; only unnamed devices take
+    the variable name. Found at HEX 2026-09-10: ``kinetix_det1 =
+    KinetixDetector(..., name="kinetix-det1")`` came out named ``kinetix_det1``,
+    so the path provider wrote to assets/kinetix_det1/ instead of the
+    provisioned assets/kinetix-det1/ and prepare failed. Asset folders with two
+    words all use the dash (kinetix-det1..4, perkin-elmer), and a Python
+    variable cannot carry one, so the explicit name must win.
+    """
+    monkeypatch.setenv("HEXTOOLS_RUNNING_IN_CI", "yes")
+
+    async with auto_init_devices(timeout=1.0):
+        kinetix_det1 = Motor("TEST:K1", name="kinetix-det1")
+        unnamed = Motor("TEST:U")
+
+    assert kinetix_det1.name == "kinetix-det1"
+    assert kinetix_det1.velocity.name == "kinetix-det1_velocity"
+    assert unnamed.name == "unnamed"
+    assert unnamed.velocity.name == "unnamed_velocity"
+
+
 async def test_auto_init_devices_context_manager_printout(monkeypatch, capsys):
     # CI env makes the processor connect in mock mode.
     monkeypatch.setenv("HEXTOOLS_RUNNING_IN_CI", "yes")

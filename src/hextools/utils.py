@@ -161,7 +161,12 @@ def auto_init_devices(timeout: float = 1.0):
 
     async def _process_devices(devices: dict[str, Device]):
         for name, device in devices.items():
-            device.set_name(name, child_name_separator="_")
+            # An explicit ``name=`` wins over the variable name: provisioned
+            # asset folders use dashes (kinetix-det1, perkin-elmer) that a
+            # Python identifier cannot carry, and the path provider builds the
+            # write path from the device name. Unnamed devices take the
+            # variable name, as ophyd-async's own init_devices does.
+            device.set_name(device.name or name, child_name_separator="_")
         coros = {
             name: device.connect(mock, timeout) for name, device in devices.items()
         }
