@@ -2,6 +2,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import bluesky.plan_stubs
 import pytest
 from bluesky import Msg, RunEngine
 from bluesky import plan_stubs as bps
@@ -18,6 +19,25 @@ from ophyd_async.epics.adkinetix import KinetixDetector
 
 from hextools.photon_delivery_system import Shutter
 from hextools.tomography.radiography import FRAME_PERIOD_MARGIN, take_radiograph
+
+
+class _FrozenClock:
+    """Stand-in for the ``time`` module whose clock never advances.
+
+    ``bps.repeat`` (which ``bp.count`` builds on) emits a sleep only when
+    ``delay - elapsed`` is still positive. With a real clock, whether the sleep
+    appears at all is a race against how fast the machine ran the acquisition -
+    which is why asserting an exact sleep count used to fail on CI, on a
+    different pair of Python versions each run. Freezing elapsed time at zero
+    makes the full delay survive every time. The only two uses of ``time`` in
+    ``bluesky.plan_stubs`` are the pair inside that delay calculation, so
+    nothing else is affected.
+    """
+
+    @staticmethod
+    def time() -> float:
+        return 0.0
+
 
 # --- shutters: same shape as tests/tomography/test_alignment.py ---------------
 
@@ -100,6 +120,10 @@ async def test_take_radiograph_single_row(
 ):
     # the profile sets this; tests do not load the profile
     monkeypatch.setenv("OPHYD_ASYNC_PRESERVE_DETECTOR_STATE", "YES")
+    # Make the inter-acquisition delay deterministic rather than a race against
+    # runner speed - see _FrozenClock. Without this the sleep assertions below
+    # pass or fail depending on how loaded the machine is.
+    monkeypatch.setattr(bluesky.plan_stubs, "time", _FrozenClock)
     exposure_time, num_images, num_acquisitions, wait = 0.1, 10, 5, 0.01
 
     fe_shutter, photon_shutter = two_shutters
@@ -141,9 +165,22 @@ async def test_take_radiograph_single_row(
     assert start["plan_name"] == "take_radiograph"
 
     sleeps = messages_by_type.get("sleep", [])
-    assert len(sleeps) == num_acquisitions - 1
-    # bp.count subtracts elapsed time from the delay, so each sleep is <= wait
-    assert all(0 < m.args[0] <= wait for m in sleeps)
+    # num_acquisitions, NOT num_acquisitions - 1. take_radiograph passes a
+    # SCALAR delay to bp.count, which turns it into itertools.repeat - an
+    # iterator that never exhausts - so bps.repeat emits a sleep after every
+    # acquisition INCLUDING THE LAST. The plan therefore waits time_gap once
+    # more after the final frame, which is a real trailing wait at the beamline
+    # for any sizeable gap.
+    #
+    # The old assertion of num_acquisitions - 1 only ever passed when timing
+    # happened to swallow exactly one of the sleeps, which is why it failed in
+    # both directions: 3 observed locally on 2026-09-18, 0 on CI, 5 here with
+    # the clock frozen.
+    assert len(sleeps) == num_acquisitions
+    # Exact, not "<= wait": with the clock frozen the whole gap survives. If
+    # bluesky ever measures elapsed time some other way, this fails loudly
+    # instead of quietly going back to being a race.
+    assert all(m.args[0] == wait for m in sleeps)
 
     assert await ktx.driver.acquire_time.get_value() == exposure_time
     assert await ktx.driver.num_images.get_value() == num_images
