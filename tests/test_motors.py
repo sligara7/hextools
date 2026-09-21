@@ -4,18 +4,18 @@ from bluesky.run_engine import RunEngine
 from bluesky.utils import FailedStatus
 from ophyd_async.core import init_devices, set_mock_value
 
-from hextools.motors import CameraObjective, DoubleObjCamera, HomeStatus
+from hextools.motors import CameraObjective, FOV_2_4_mm_Camera, HomeStatus
 
 
 @pytest.fixture
-def double_obj_camera() -> DoubleObjCamera:
+def double_obj_camera() -> FOV_2_4_mm_Camera:
     with init_devices(mock=True):
-        camera = DoubleObjCamera("TEST:CAM:")
+        camera = FOV_2_4_mm_Camera("TEST:CAM:")
     return camera
 
 
 async def test_double_obj_camera_raises_when_not_homed(
-    RE: RunEngine, double_obj_camera: DoubleObjCamera
+    RE: RunEngine, double_obj_camera: FOV_2_4_mm_Camera
 ):
     set_mock_value(double_obj_camera._obj_selector_home_sts, HomeStatus.NOT_HOMED)
 
@@ -33,7 +33,7 @@ async def test_double_obj_camera_raises_when_not_homed(
 )
 async def test_double_obj_camera_moves_to_objective(
     RE: RunEngine,
-    double_obj_camera: DoubleObjCamera,
+    double_obj_camera: FOV_2_4_mm_Camera,
     objective: CameraObjective,
     readback_attr: str,
     other_readback_attr: str,
