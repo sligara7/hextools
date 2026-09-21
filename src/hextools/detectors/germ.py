@@ -298,11 +298,13 @@ class GeRMTriggerLogic(DetectorTriggerLogic):
             raise ValueError(
                 "Only a single collection with a single exposure is supported."
             )
-        await self.driver.acquire_time.set(livetime)
+        # 0 means "leave the exposure time as configured" - the same contract
+        # PhantomTriggerLogic.prepare_internal honours.
+        if livetime != 0:
+            await self.driver.acquire_time.set(livetime)
 
     async def default_trigger_info(self) -> TriggerInfo:
         livetime = await self.driver.acquire_time.get_value()
-        print(livetime)
         return TriggerInfo(
             trigger=DetectorTrigger.INTERNAL,
             livetime=livetime,

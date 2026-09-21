@@ -443,14 +443,15 @@ class PhantomAcquireLogic(ADAcquireLogic):
         # a timeout error indicating acquisition stopped while waiting for trigger.
         # Otherwise, if acq is still running, keep waiting for trigger_received to
         # go to 1.
-        while True:
+        got_trigger = False
+        while not got_trigger:
             try:
                 async for trigger_received in observe_value(
                     self.driver.trigger_received, done_timeout=DEFAULT_TIMEOUT
                 ):
                     if trigger_received:
+                        got_trigger = True
                         break
-                break
             except TimeoutError as exc:
                 acquiring = await self.driver.acquire.get_value()
                 if not acquiring:
@@ -465,7 +466,7 @@ class PhantomAcquireLogic(ADAcquireLogic):
             async for actual_post_trig in observe_value(
                 self.driver.array_counter, done_timeout=DEFAULT_TIMEOUT
             ):
-                if target_post_trig == actual_post_trig:
+                if actual_post_trig >= target_post_trig:
                     break
         except TimeoutError as exc:
             (
@@ -518,6 +519,13 @@ class PhantomAcquireLogic(ADAcquireLogic):
             self.driver.selected_cine.get_value(),
             self.driver.download_count.get_value(),
         )
+        if selected_cine_num not in self.driver.cines:
+            raise ValueError(
+                f"Camera reports selected cine {selected_cine_num}, but this device "
+                f"was built with cines {min(self.driver.cines)}-"
+                f"{max(self.driver.cines)}. Check SelectedCine on the IOC, and the "
+                f"num_cines this PhantomIO was constructed with."
+            )
         selected_cine = self.driver.cines[selected_cine_num]
 
         # As long as our download counter is counting up and has not reached the target
@@ -532,24 +540,17 @@ class PhantomAcquireLogic(ADAcquireLogic):
                     if saved:
                         return
             except TimeoutError as err:
-                # download_counter = await self.driver.download_count.get_value()
-                # if download_counter == 0:
-                #     raise TimeoutError(
-                #         "Download counter stopped incrementing and cine was not marked as saved!"
-                #     ) from err
-
                 current, saved = await asyncio.gather(
                     self.driver.download_count.get_value(),
                     selected_cine.cine_content_saved.get_value(),
-                )
-                print(
-                    f"Last value: {last_download_count}, Current value: {current}, Saved: {saved}"
                 )
                 if saved:
                     return
                 if current <= last_download_count:
                     raise TimeoutError(
-                        "Download counter stopped incrementing and cine was not marked as saved!"
+                        "Download counter stopped incrementing and cine was not "
+                        f"marked as saved! Download count held at {current} "
+                        f"(was {last_download_count}) on cine {selected_cine_num}."
                     ) from err
                 last_download_count = current
 
