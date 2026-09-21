@@ -129,14 +129,19 @@ class RotationMotor(AsyncEpicsMotor):
         Parameters
         ----------
         encoder_resolution : float
-            The resolution of the encoder in counts per degree.
+            The encoder step size, in degrees per count. This is the motor
+            record's ERES field, whose own definition is "Encoder Step Size
+            (EGU)" - the size of ONE count, expressed in engineering units.
 
         Returns
         -------
         int
             The number of encoder counts per revolution.
         """
-        return int(360.0 * encoder_resolution)
+        # Counts per revolution is 360 degrees DIVIDED by the size of a count.
+        # This multiplied until 2026-09-21, which is dimensionally deg^2/count
+        # and truncated to 0 for any encoder finer than ~0.0028 deg/count.
+        return int(360.0 / encoder_resolution)
 
 
 class SampleTower(StandardReadable, EpicsDevice):
