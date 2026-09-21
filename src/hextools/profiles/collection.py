@@ -27,7 +27,6 @@ from ophyd_async.epics.adcore import (
     ADWriterFactory,
     NDStatsIO,
     PluginSignalDataLogic,
-    ContAcqDetector,
 )
 from ophyd_async.epics.adkinetix import KinetixDetector
 from ophyd_async.epics.advimba import VimbaDetector
@@ -39,6 +38,7 @@ from hextools.utils import show_docs
 
 from hextools.detectors.phantom import PhantomDetector
 from hextools.detectors.kinetix import kinetix_factory
+from hextools.detectors.perkin_elmer import perkin_elmer_factory
 from hextools.machine import NSLS2StorageRing
 from hextools.motors import (
     FOV_2_4_mm_Camera,
@@ -201,12 +201,7 @@ with auto_init_devices(timeout=1.0):
     pe_path_provider = NSLS2PathProvider(
         RE.md, base_write_dir=PureWindowsPath("Z:\\proposals")
     )
-    perkin_elmer = ContAcqDetector(
-        "XF:27ID1-ES{PE-Det:1}",
-        ADWriterFactory.hdf(pe_path_provider),
-        name="perkin-elmer",
-        proc_suffix="Proc1:",
-    )
+    perkin_elmer = perkin_elmer_factory(pe_path_provider)
 
     germ = GeRMDetector(
         "XF:27ID1-ES{GeRM-Det:1}",
