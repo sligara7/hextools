@@ -5,7 +5,6 @@ from ophyd_async.core import (
     StaticFilenameProvider,
     StaticPathProvider,
     init_devices,
-    set_mock_value,
 )
 from ophyd_async.epics.adcore import NDPluginBaseIO, NDProcessIO
 
@@ -18,7 +17,6 @@ def perkin_elmer(RE, tmp_path: Path):
         det = perkin_elmer_factory(
             StaticPathProvider(StaticFilenameProvider("scan"), tmp_path)
         )
-    set_mock_value(det.hdf.file_path_exists, True)
     return det
 
 
