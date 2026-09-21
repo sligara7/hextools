@@ -98,14 +98,17 @@ async def test_optics_table_reads_all_ten_axes(optics_table: OpticsTable):
     ((1.0, 360), (10.0, 3600), (2.5, 900), (0.5, 180)),
 )
 def test_rotation_motor_counts_per_rev(
-    encoder_resolution: float, expected_counts_per_rev: int
+    RE, encoder_resolution: float, expected_counts_per_rev: int
 ):
     """Counts per revolution is 360 degrees times the encoder resolution.
 
     tomo_flyscan positions by encoder count, so this conversion decides where
     a rotation scan actually starts.
     """
+    with init_devices(mock=True):
+        motor = RotationMotor("TEST:ROT:")
+
     assert (
-        RotationMotor.get_encoder_counts_per_rev(None, encoder_resolution)
+        motor.get_encoder_counts_per_rev(encoder_resolution)
         == expected_counts_per_rev
     )
