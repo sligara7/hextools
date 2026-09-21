@@ -143,9 +143,8 @@ def initialize_run_engine() -> RunEngine:
                 },
             }
         )
-    return RunEngine(
-        RedisJSONDict(open_redis_client(redis_ssl=True), "")  # ty: ignore[invalid-argument-type]  # TODO: loosen RE.md to Mapping
-    )
+    # TODO: loosen the type of RE.md to Mapping rather than dict.
+    return RunEngine(RedisJSONDict(open_redis_client(redis_ssl=True), ""))
 
 
 def print_proposal_info(md: MutableMapping[str, Any]):
