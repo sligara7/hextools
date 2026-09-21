@@ -10,41 +10,41 @@ from hextools.detectors.germ import GeRMDetector
 # to hang on exit with "double free or corruption".
 os.environ.pop("PYEPICS_LIBCA", None)
 
-from bluesky import preprocessors as bpp
+from pathlib import PureWindowsPath
+
+# bp/bps/bpp are re-exported so beamline staff can use them at the prompt.
+from bluesky import plan_stubs as bps  # noqa: F401
+from bluesky import plans as bp  # noqa: F401
+from bluesky import preprocessors as bpp  # noqa: F401 - re-exported for the prompt
 from bluesky.callbacks.best_effort import BestEffortCallback
 from bluesky.run_engine import (
     RunEngine,
     autoawait_in_bluesky_event_loop,
 )
+from bluesky.suspenders import SuspendFloor  # noqa: F401 - the commented-out beam suspender below
 from bluesky.utils import ProgressBarManager
 from bluesky_tiled_plugins import TiledWriter
 from IPython.core.getipython import get_ipython
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
-from pathlib import PureWindowsPath
 from nslsii.ophyd_async.providers import NSLS2PathProvider
-from pathlib import Path
 from ophyd_async.epics.adcore import (
-    ContAcqDetector,
     ADWriterFactory,
-    NDStatsIO,
-    PluginSignalDataLogic,
+    ContAcqDetector,
+    NDStatsIO,  # noqa: F401 - the commented-out fs_window block below
+    PluginSignalDataLogic,  # noqa: F401 - the commented-out fs_window block below
 )
-from ophyd_async.epics.adkinetix import KinetixDetector
 from ophyd_async.epics.advimba import VimbaDetector
 from ophyd_async.fastcs.panda import HDFPanda
 from tiled.client import from_uri, simple
-from bluesky import plans as bp, plan_stubs as bps, preprocessors as bpp
-from bluesky.suspenders import SuspendFloor
-from hextools.utils import show_docs
 
-from hextools.detectors.phantom import PhantomDetector
 from hextools.detectors.kinetix import kinetix_factory
+from hextools.detectors.phantom import PhantomDetector
 from hextools.machine import NSLS2StorageRing
 from hextools.motors import (
     FOV_2_4_mm_Camera,
+    FOV_20_40_mm_Camera,
     OpticsTable,
     SampleTower,
-    FOV_20_40_mm_Camera,
 )
 from hextools.photon_delivery_system import (
     DCLM,
@@ -60,6 +60,7 @@ from hextools.utils import (
     is_running_in_ci,
     print_proposal_info,
     print_version_info,
+    show_docs,  # noqa: F401 - called interactively by staff
 )
 
 # Environment variables for Redis host and ophyd_async detector state preservation
@@ -216,7 +217,7 @@ with auto_init_devices(timeout=1.0):
 
 # TODO: Figure out why the '-' character in the name is being
 # replaced with '_' in the ctx manager
-perkin_elmer._name = "perkin-elmer"
+perkin_elmer._name = "perkin-elmer"  # noqa: SLF001 - see the TODO above
 
 # Install a suspender to pause the RunEngine if the beam current drops below 100 mA
 # and resume when it rises above 300 mA.

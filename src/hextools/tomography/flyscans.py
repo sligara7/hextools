@@ -1,23 +1,23 @@
 """Tomography plans for HEX beamline."""
 
 from bluesky import plan_stubs as bps
+from bluesky import preprocessors as bpp
 from ophyd_async.core import DetectorTrigger, StandardFlyable, TriggerInfo
 from ophyd_async.epics.adkinetix import KinetixDetector
 from ophyd_async.fastcs.panda import HDFPanda
 
+from hextools.detectors import FRAME_PERIOD_MARGIN
+from hextools.photon_delivery_system import Shutter
 from hextools.photon_delivery_system.shutter import (
     ensure_shutter_closed,
     ensure_shutter_open,
 )
-from hextools.utils import ensure_available, get_obj_from_ipython_ns
-from hextools.photon_delivery_system import Shutter
+from hextools.utils import ensure_available
 
 from ..detectors.phantom import PhantomDetector
 from ..flyers import SingleAxisFlyableLogic, construct_fly_info_models
 from ..motors import RotationMotor
-from bluesky import preprocessors as bpp
 
-from hextools.detectors import FRAME_PERIOD_MARGIN
 
 def tomo_flyscan(
     detectors: list[KinetixDetector | PhantomDetector],
@@ -62,7 +62,6 @@ def tomo_flyscan(
     use_shutter : bool
         whether to use/check the shutter during the scan
     """
-
     fe_shutter = ensure_available(Shutter, fe_shutter=fe_shutter)
     photon_shutter = ensure_available(Shutter, photon_shutter=photon_shutter)
 
@@ -89,7 +88,6 @@ def tomo_flyscan(
     # Construct ephemeral flyer for the single axis flyscan
     single_axis_panda_flyer = StandardFlyable(SingleAxisFlyableLogic(panda))
     all_devices = [*all_detectors, single_axis_panda_flyer, motor]
-
 
     @bpp.run_decorator(md=_md)
     @bpp.stage_decorator(*all_devices)

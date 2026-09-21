@@ -5,7 +5,7 @@ from ophyd_async.epics.adkinetix import KinetixDetector
 
 
 def kinetix_factory(num: int, path_provider, name: str):
-    """Helper factory function to create a KinetixDetector with HDF writer.
+    """Create a KinetixDetector with an HDF writer for the HEX beamline.
 
     Parameters
     ----------

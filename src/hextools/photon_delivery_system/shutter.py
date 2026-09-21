@@ -70,7 +70,8 @@ def ensure_shutter_state(
     desired_state : bool
         the state that the shutter should be in (True for open, False for closed)
     allow_actuation : bool, default False
-        whether to allow the plan to actuate the shutter if it is not in the desired state
+        whether the plan may actuate the shutter when it is not already in
+        the desired state
     group : Hashable | None, optional
         the Bluesky group to use for the actuation, if any
     wait : bool, default True
@@ -97,7 +98,8 @@ def ensure_shutter_open(
     shutter : Shutter
         shutter to guarantee the state of.
     allow_actuation : bool, default False
-        whether to allow the plan to actuate the shutter if it is not in the desired state
+        whether the plan may actuate the shutter when it is not already in
+        the desired state
     group : Hashable | None, optional
         the Bluesky group to use for the actuation, if any
     wait : bool, default True
@@ -121,7 +123,8 @@ def ensure_shutter_closed(
     shutter : Shutter
         shutter to guarantee the state of.
     allow_actuation : bool, default True
-        whether to allow the plan to actuate the shutter if it is not in the desired state
+        whether the plan may actuate the shutter when it is not already in
+        the desired state
     group : Hashable | None, optional
         the Bluesky group to use for the actuation, if any
     wait : bool, default True

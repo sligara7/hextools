@@ -33,9 +33,7 @@ def test_kinetix_factory_uses_the_hex_pv_prefix(RE, tmp_path: Path, num: int):
             StaticPathProvider(StaticFilenameProvider("scan"), tmp_path),
             name=f"kinetix-det{num}",
         )
-    assert (
-        f"XF:27ID1-BI{{Kinetix-Det:{num}}}cam1:Acquire" in det.driver.acquire.source
-    )
+    assert f"XF:27ID1-BI{{Kinetix-Det:{num}}}cam1:Acquire" in det.driver.acquire.source
 
 
 def test_kinetix_factory_wires_a_proc_plugin(kinetix):
@@ -45,9 +43,7 @@ def test_kinetix_factory_wires_a_proc_plugin(kinetix):
     what the HEX tomography plans rely on.
     """
     assert isinstance(kinetix.proc, NDProcessIO)
-    assert (
-        "XF:27ID1-BI{Kinetix-Det:1}Proc1:NumFilter" in kinetix.proc.num_filter.source
-    )
+    assert "XF:27ID1-BI{Kinetix-Det:1}Proc1:NumFilter" in kinetix.proc.num_filter.source
 
 
 def test_kinetix_factory_keeps_the_name_it_was_given(kinetix):

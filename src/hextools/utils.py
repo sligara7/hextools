@@ -4,7 +4,7 @@ import asyncio
 import os
 from collections.abc import MutableMapping
 from datetime import datetime
-from typing import Any, OrderedDict, TypeVar
+from typing import Any, TypeVar
 
 from bluesky.run_engine import RunEngine
 from IPython.core.getipython import get_ipython
@@ -38,8 +38,7 @@ def get_obj_from_ipython_ns(var_name: str, var_type: type[NSVarT]) -> NSVarT | N
 
 
 def ensure_available(var_type: type[NSVarT], **kwargs: NSVarT | None) -> NSVarT:
-    """Ensure that an object with a given name is available in the current scope, or it can be retrieved from the IPython namespace."""
-
+    """Ensure a named object is reachable, here or in the IPython namespace."""
     if len(kwargs) != 1:
         raise ValueError("Can only check availability of a single device at a time.")
 
@@ -56,7 +55,8 @@ def ensure_available(var_type: type[NSVarT], **kwargs: NSVarT | None) -> NSVarT:
         if value is not None:
             return value
         raise ValueError(
-            f"Device {name} of type {var_type} is not available locally, or in the IPython namespace!"
+            f"Device {name} of type {var_type} is not available locally, "
+            "or in the IPython namespace!"
         )
 
 
@@ -237,9 +237,9 @@ SPACE_PREFIX = "    "
 
 
 def _get_children(device: Device) -> list[tuple[str, Device]]:
-    """
+    """Return the (name, child) pairs of a device, sorted for display.
+
     Supplementary method for building the tree view of a device.
-    Return the (name, child) pairs of a device, sorted for display.
     """
     children = [
         (name, child) for name, child in device.children() if isinstance(child, Device)
@@ -251,9 +251,9 @@ def _get_children(device: Device) -> list[tuple[str, Device]]:
 
 
 def _make_tree_body(tree: list[str], device: Device, prefix=""):
-    """
+    """Create the tree body.
+
     Supplementary method for building the tree view of a device.
-    Create the tree body.
     """
     entries = _get_children(device)
     last_index = len(entries) - 1

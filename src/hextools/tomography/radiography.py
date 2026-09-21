@@ -43,17 +43,19 @@ Where files land is decided by each detector's path provider (set in the
 profile), not by this plan — the old script's proposal-folder logic is gone.
 """
 
-from bluesky import plan_stubs as bps, plans as bp
 import bluesky.preprocessors as bpp
-from nslsii import detectors
-from ophyd_async.epics.adcore import AreaDetector
+from bluesky import plan_stubs as bps
+from bluesky import plans as bp
 from ophyd_async.core import DetectorTrigger, TriggerInfo
-from hextools.photon_delivery_system.shutter import ensure_shutter_closed, ensure_shutter_open
-from hextools.utils import ensure_available, get_obj_from_ipython_ns
-
-from hextools.photon_delivery_system import Shutter
+from ophyd_async.epics.adcore import AreaDetector
 
 from hextools.detectors import FRAME_PERIOD_MARGIN
+from hextools.photon_delivery_system import Shutter
+from hextools.photon_delivery_system.shutter import (
+    ensure_shutter_closed,
+    ensure_shutter_open,
+)
+from hextools.utils import ensure_available
 
 
 def take_radiograph(
@@ -61,15 +63,18 @@ def take_radiograph(
     exposure_time: float,  # screen: Exposure Time
     num_images: int,  # screen: Num Images
     num_acquisitions: int = 1,  # screen: Number of acquisitions
-    acquire_period: float = 0.0,  # screen: Acquire Time    
+    acquire_period: float = 0.0,  # screen: Acquire Time
     external_trigger: bool = False,  # screen: Trigger Mode
     time_gap: float = 0.0,  # plan-level: idle between repeats
     num_exposures: int = 1,  # screen: Exp / Image
     sample_name: str | None = None,  # Name of the sample being imaged
     md: dict | None = None,  # Extra metadata to merge into the run's metadata
-    use_shutter: bool = False,  # Whether to open/check the photon shutter during the scan
-    fe_shutter: Shutter | None = None,  # Front-end shutter to check before opening the photon shutter
-    photon_shutter: Shutter | None = None,  # Photon shutter to open/close around the acquisition
+    # Whether to open and check the photon shutter during the scan
+    use_shutter: bool = False,
+    fe_shutter: Shutter
+    | None = None,  # Front-end shutter to check before opening the photon shutter
+    photon_shutter: Shutter
+    | None = None,  # Photon shutter to open/close around the acquisition
 ):
     """Acquire a burst-mode radiograph series on the HEX beamline.
 
@@ -105,7 +110,6 @@ def take_radiograph(
     photon_shutter : Shutter
         the photon shutter to open/close around the acquisition
     """
-
     fe_shutter = ensure_available(Shutter, fe_shutter=fe_shutter)
     photon_shutter = ensure_available(Shutter, photon_shutter=photon_shutter)
 
@@ -148,9 +152,7 @@ def take_radiograph(
         if sample_name is not None:
             _md["sample_name"] = sample_name
         _md.update(md or {})
-        yield from bp.count(
-            detectors, num_acquisitions, delay=time_gap, md=_md
-        )
+        yield from bp.count(detectors, num_acquisitions, delay=time_gap, md=_md)
 
     def _cleanup():
         if use_shutter:

@@ -178,7 +178,7 @@ class HomeStatus(StrictEnum):
     HOMED = "Homed"
 
 
-class FOV_2_4_mm_Camera(
+class FOV_2_4_mm_Camera(  # noqa: N801 - the name states the field of view in mm
     StandardReadable, EpicsDevice, AsyncMovable[CameraObjective | str]
 ):
     """HEX double objective camera."""
@@ -250,7 +250,9 @@ class FOV_2_4_mm_Camera(
         await wait_for_value(rb_check, True, timeout=None)
 
 
-class FOV_20_40_mm_Camera(StandardReadable, EpicsDevice):
+class FOV_20_40_mm_Camera(  # noqa: N801 - the name states the field of view in mm
+    StandardReadable, EpicsDevice
+):
     """HEX wide field of view camera."""
 
     def __init__(self, prefix: str, name: str = "fov_20_40_mm_camera"):

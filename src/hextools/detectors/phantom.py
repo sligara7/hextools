@@ -121,6 +121,8 @@ class PhantomPixelDataFormat(StrictEnum):
 
 
 class PhantomCineIO(EpicsDevice, StandardReadable):
+    """One cine: a recorded segment held in the camera's RAM."""
+
     cine_name: A[SignalR[str], PvSuffix("Name_RBV")]
     width: A[SignalR[int], PvSuffix("Width_RBV")]
     height: A[SignalR[int], PvSuffix("Height_RBV")]
@@ -374,7 +376,7 @@ class PhantomTriggerLogic(DetectorTriggerLogic):
         await self.setup_download(num)
 
     async def prepare_exposures_per_collection(self, exposures_per_collection: int):
-        """Prepare the process plugin for the specified number of exposures per collection.
+        """Prepare the process plugin for this many exposures per collection.
 
         Parameters
         ----------
@@ -488,16 +490,16 @@ class PhantomAcquireLogic(ADAcquireLogic):
                     f"does not match actual number {actual_post_trig}"
                 ) from exc
 
-        # If we recieved the trigger, we know at this point how many frames we'll have access to,
-        # and how many we want to download. If we are trying to DL more than we have available,
-        # raise a RuntimeError.
+        # Having received the trigger we know how many frames exist and how many
+        # were asked for. Refuse rather than download past the end.
         available_frames, total_download_frames = await asyncio.gather(
             self.driver.total_frame_count.get_value(),
             self.driver.total_download_frames.get_value(),
         )
         if total_download_frames > available_frames:
             raise RuntimeError(
-                f"Requested {total_download_frames} frames to download, but only {available_frames} are available!"
+                f"Requested {total_download_frames} frames to download, but "
+                f"only {available_frames} are available!"
             )
 
         # Finally, start the download
