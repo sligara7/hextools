@@ -1,7 +1,7 @@
 """Kinetix detector support for HEX beamline."""
 
-from ophyd_async.epics.adkinetix import KinetixDetector
 from ophyd_async.epics.adcore import ADWriterFactory
+from ophyd_async.epics.adkinetix import KinetixDetector
 
 
 def kinetix_factory(num: int, path_provider, name: str):
@@ -21,7 +21,6 @@ def kinetix_factory(num: int, path_provider, name: str):
     KinetixDetector
         The created Kinetix detector with HDF writer.
     """
-
     return KinetixDetector(
         f"XF:27ID1-BI{{Kinetix-Det:{num}}}",
         ADWriterFactory.hdf(path_provider),

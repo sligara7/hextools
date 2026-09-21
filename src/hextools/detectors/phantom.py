@@ -32,10 +32,10 @@ from ophyd_async.epics.adcore import (
     NDFileHDF5IO,
     NDPluginBaseIO,
     NDProcessIO,
-    prepare_exposures_per_collection,
     default_trigger_info_from_detector_settings,
+    prepare_exposures_per_collection,
 )
-from ophyd_async.epics.core import EpicsDevice, PvSuffix, epics_signal_rw_rbv
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
 
 class PhantomDownloadFrameMode(StrictEnum):

@@ -1,13 +1,12 @@
 """Ophyd async support for the GeRM detector at HEX."""
 
 from collections.abc import Mapping, Sequence
-from tkinter.font import names
 from typing import Annotated as A
 
+import numpy as np
 from ophyd_async.core import (
     DEFAULT_TIMEOUT,
     DetectorAcquireLogic,
-    DetectorDataLogic,
     DetectorTrigger,
     DetectorTriggerLogic,
     PathProvider,
@@ -22,19 +21,15 @@ from ophyd_async.core import (
     wait_for_value,
 )
 from ophyd_async.core import StandardReadableFormat as Format
-from ophyd_async.epics.core import EpicsDevice, PvSuffix
 from ophyd_async.epics.adcore import (
     ADBaseColorMode,
     ADBaseDataType,
-    ADBaseIO,
     ADHDFDataLogic,
-    ADWriterFactory,
     NDArrayDescription,
     NDFileHDF5IO,
     NDPluginBaseIO,
-    NDProcessIO,
 )
-import numpy as np
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
 
 class TDCSlopeTimes(StrictEnum):

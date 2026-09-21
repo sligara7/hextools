@@ -1,9 +1,9 @@
 """Shutter/GV device for the photon delivery system."""
 
-from typing import Hashable
+from collections.abc import Hashable
 
-from ophyd_async.core import AsyncMovable, AsyncStatus, wait_for_value
 from bluesky import plan_stubs as bps
+from ophyd_async.core import AsyncMovable, AsyncStatus, wait_for_value
 from ophyd_async.epics.core import (
     EpicsDevice,
     epics_signal_r,
@@ -45,7 +45,6 @@ class Shutter(EpicsDevice, AsyncMovable[bool]):
         AsyncStatus
             An object representing the status of the set operation.
         """
-
         if value:
             cmd_sig = self.open_cmd
         else:
@@ -77,7 +76,6 @@ def ensure_shutter_state(
     wait : bool, default True
         whether to wait for the shutter to reach the desired state after actuation
     """
-
     shutter_status = yield from bps.rd(shutter.status)
     if shutter_status != desired_state:
         if allow_actuation:
@@ -105,7 +103,6 @@ def ensure_shutter_open(
     wait : bool, default True
         whether to wait for the shutter to reach the desired state after actuation
     """
-
     yield from ensure_shutter_state(
         shutter, True, allow_actuation=allow_actuation, wait=wait, group=group
     )
@@ -130,7 +127,6 @@ def ensure_shutter_closed(
     wait : bool, default True
             whether to wait for the shutter to reach the desired state after actuation
     """
-
     yield from ensure_shutter_state(
         shutter, False, allow_actuation=allow_actuation, wait=wait, group=group
     )
