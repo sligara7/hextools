@@ -144,7 +144,7 @@ def initialize_run_engine() -> RunEngine:
             }
         )
     return RunEngine(
-        RedisJSONDict(open_redis_client(redis_ssl=True), "")  # type: ignore (TODO: Loosen type of RE.md to Mapping from dict)
+        RedisJSONDict(open_redis_client(redis_ssl=True), "")  # ty: ignore[invalid-argument-type]  # TODO: loosen RE.md to Mapping
     )
 
 

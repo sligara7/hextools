@@ -150,7 +150,7 @@ async def test_arm_logic_arm_timeout_waiting_for_trigger(
     )  # Set a short timeout for the test
 
     # Pre-set waiting_for_trigger so set_and_wait_for_other_value completes immediately
-    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, 1)
+    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, True)
 
     # Acquisition stop after a short delay, so it takes effect after acquire.set(True)
     async def _stop_acquisition():
@@ -176,8 +176,8 @@ async def test_arm_logic_arm_timeout_saving_to_cine(
 
     # Pre-set waiting_for_trigger and trigger_received so the first two
     # loops complete immediately
-    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, 1)
-    set_mock_value(phantom_arm_logic.driver.trigger_received, 1)
+    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, True)
+    set_mock_value(phantom_arm_logic.driver.trigger_received, True)
     # Set post_trig_frames to a value that won't match array_counter,
     # so the second loop times out
     set_mock_value(phantom_arm_logic.driver.post_trig_frames, 10)
@@ -198,10 +198,10 @@ async def test_arm_logic_arm_post_trig_frames_incorrect(
 
     # Pre-set waiting_for_trigger and trigger_received so the first two loops
     # complete immediately
-    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, 1)
-    set_mock_value(phantom_arm_logic.driver.trigger_received, 1)
+    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, True)
+    set_mock_value(phantom_arm_logic.driver.trigger_received, True)
     set_mock_value(phantom_arm_logic.driver.post_trig_frames, 10)
-    set_mock_value(phantom_arm_logic.driver.complete_and_valid, 1)
+    set_mock_value(phantom_arm_logic.driver.complete_and_valid, True)
     set_mock_value(
         phantom_arm_logic.driver.array_counter, 5
     )  # Different from post_trig_frames
@@ -222,10 +222,10 @@ async def test_arm_logic_arm_success(
 
     # Pre-set waiting_for_trigger and trigger_received so the first two loops
     # complete immediately
-    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, 1)
-    set_mock_value(phantom_arm_logic.driver.trigger_received, 1)
+    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, True)
+    set_mock_value(phantom_arm_logic.driver.trigger_received, True)
     set_mock_value(phantom_arm_logic.driver.post_trig_frames, 10)
-    set_mock_value(phantom_arm_logic.driver.complete_and_valid, 1)
+    set_mock_value(phantom_arm_logic.driver.complete_and_valid, True)
     set_mock_value(
         phantom_arm_logic.driver.array_counter, 10
     )  # Matches post_trig_frames
@@ -242,10 +242,10 @@ async def test_arm_logic_arm_refuses_when_too_few_frames_available(
 ):
     monkeypatch.setattr(hextools.detectors.phantom, "DEFAULT_TIMEOUT", 0.1)
 
-    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, 1)
-    set_mock_value(phantom_arm_logic.driver.trigger_received, 1)
+    set_mock_value(phantom_arm_logic.driver.waiting_for_trigger, True)
+    set_mock_value(phantom_arm_logic.driver.trigger_received, True)
     set_mock_value(phantom_arm_logic.driver.post_trig_frames, 10)
-    set_mock_value(phantom_arm_logic.driver.complete_and_valid, 1)
+    set_mock_value(phantom_arm_logic.driver.complete_and_valid, True)
     set_mock_value(phantom_arm_logic.driver.array_counter, 10)
     # Ask for 11 frames (-5..5 inclusive) when the camera only recorded 4.
     set_mock_value(phantom_arm_logic.driver.download_start_frame, -5)
@@ -378,7 +378,10 @@ async def test_detector_full_stack(
     # The Proc plugin's filter count divides the image count when the detector
     # reads back its own state; a real NDPluginProcess reports at least 1, but
     # the mock defaults to 0.
-    set_mock_value(phantom.proc.num_filter, 1)
+    # AreaDetector attaches its plugins with setattr, so .proc exists at
+    # runtime but no type checker can see it. Silenced rather than worked
+    # around: getattr would only trade this for a lint error.
+    set_mock_value(phantom.proc.num_filter, 1)  # ty: ignore[unresolved-attribute]
     set_mock_value(
         phantom.driver.select_pixel_data_format, PhantomPixelDataFormat.P_TEN
     )
@@ -391,10 +394,10 @@ async def test_detector_full_stack(
 
     def _on_acquire(value, **kwargs):
         if value:
-            set_mock_value(phantom.driver.waiting_for_trigger, 1)
-            set_mock_value(phantom.driver.trigger_received, 1)
+            set_mock_value(phantom.driver.waiting_for_trigger, True)
+            set_mock_value(phantom.driver.trigger_received, True)
             set_mock_value(phantom.driver.array_counter, 15)
-            set_mock_value(phantom.driver.complete_and_valid, 1)
+            set_mock_value(phantom.driver.complete_and_valid, True)
             # The camera has recorded into its RAM buffer by this point.
             set_mock_value(phantom.driver.total_frame_count, 100)
 
