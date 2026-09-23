@@ -4,12 +4,6 @@ import os
 
 from hextools.detectors.germ import GeRMDetector
 
-# Remove PYEPICS_LIBCA set by the conda epics-base activation script.
-# It points to conda's libca.so which conflicts with epicscorelibs' libca.so
-# (used by aioca/ophyd-async), causing PV connections to fail and the process
-# to hang on exit with "double free or corruption".
-os.environ.pop("PYEPICS_LIBCA", None)
-
 from pathlib import PureWindowsPath
 
 # bp/bps/bpp are re-exported so beamline staff can use them at the prompt.
@@ -44,6 +38,7 @@ from hextools.motors import (
     FOV_2_4_mm_Camera,
     FOV_20_40_mm_Camera,
     OpticsTable,
+    RotationMotor,
     SampleTower,
 )
 from hextools.photon_delivery_system import (
@@ -62,6 +57,8 @@ from hextools.utils import (
     print_version_info,
     show_docs,  # noqa: F401 - called interactively by staff
 )
+
+from hextools.tomography import tomo_flyscan
 
 # Environment variables for Redis host and ophyd_async detector state preservation
 os.environ["REDIS_HOST"] = "xf27id1-hex-redis1.nsls2.bnl.gov"
@@ -111,7 +108,7 @@ RE.subscribe(bec)
 # Define our global default path provider for the beamline
 path_provider = NSLS2PathProvider(RE.md)
 
-with auto_init_devices(timeout=1.0):
+with auto_init_devices(timeout=2.0, verbose=False):
     # Shutters (Front-end and photon)
     fe_shutter = Shutter("XF:27IDA-PPS{Sh:FE}", name="front_end_shutter")
     photon_shutter = Shutter("XF:27IDA-PPS{L1-S1}", name="photon_shutter")
@@ -133,6 +130,7 @@ with auto_init_devices(timeout=1.0):
 
     # Sample tower
     sample_tower = SampleTower("XF:27IDF-OP:1{SMPL:1-Ax:", name="sample_tower")
+    rot_motor = sample_tower.ry2
 
     # Generate filter objects from the configuration file
     filters: list[Filter] = load_filters()
@@ -143,13 +141,13 @@ with auto_init_devices(timeout=1.0):
             ipython.user_ns[filter.name] = filter
 
     # PandABox
-    panda1 = HDFPanda("XF:27ID1-ES{PANDA:1}:", path_provider, name="panda1")
+    panda = HDFPanda("XF:27ID1-ES{PANDA:1}:", path_provider, name="panda1")
 
     # Kinetix detectors
     kinetix1 = kinetix_factory(1, path_provider, name="kinetix-det1")
-    # kinetix2 = kinetix_factory(2, path_provider, name="kinetix-det2")
+    kinetix2 = kinetix_factory(2, path_provider, name="kinetix-det2")
     kinetix3 = kinetix_factory(3, path_provider, name="kinetix-det3")
-    # kinetix4 = kinetix_factory(4, path_provider, name="kinetix-det4")
+    kinetix4 = kinetix_factory(4, path_provider, name="kinetix-det4")
 
     # Optique-Peter microscope optics
     double_obj_camera = FOV_2_4_mm_Camera(
@@ -171,6 +169,7 @@ with auto_init_devices(timeout=1.0):
     #     ADWriterFactory.hdf(path_provider),
     #     name="diamond_window_camera",
     # )
+
     sample_camera = VimbaDetector(
         "XF:27ID1-ES{Sample-Cam:1}",
         ADWriterFactory.hdf(path_provider),
@@ -187,11 +186,11 @@ with auto_init_devices(timeout=1.0):
     #     name="fs_window",
     #     plugins={"stats1": fs_window_stats},
     # )
-    # # TODO: Remove this once the StandardDetector -> StandardReadble change is merged.
-    # # TODO: Use mean rather than total, once available.
-    # fs_window.add_detector_logics(
-    #     PluginSignalDataLogic(fs_window.driver, fs_window_stats.total)
-    # )
+    # TODO: Remove this once the StandardDetector -> StandardReadble change is merged.
+    # TODO: Use mean rather than total, once available.
+    #fs_window.add_detector_logics(
+    #    PluginSignalDataLogic(fs_window.driver, fs_window_stats.total)
+    #)
 
     f_hutch_camera = VimbaDetector(
         "XF:27IDA-BI{GigE-Cam:5}",
@@ -215,13 +214,10 @@ with auto_init_devices(timeout=1.0):
         name="germ",
     )
 
-# TODO: Figure out why the '-' character in the name is being
-# replaced with '_' in the ctx manager
-perkin_elmer._name = "perkin-elmer"  # noqa: SLF001 - see the TODO above
 
 # Install a suspender to pause the RunEngine if the beam current drops below 100 mA
 # and resume when it rises above 300 mA.
-# RE.install_suspender(SuspendFloor(storage_ring.beam_current, 100, resume_thresh=390))
+RE.install_suspender(SuspendFloor(storage_ring.beam_current, 100, resume_thresh=390))
 
 # Configure baseline supplemental data to include in the metadata of every run.
 # sd = bpp.SupplementalData(
