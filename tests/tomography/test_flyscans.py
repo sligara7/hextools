@@ -779,6 +779,38 @@ async def test_tomo_flyscan_fails_on_too_many_missed_frames(
     assert await ktx.driver.trigger_mode.get_value() == KinetixTriggerMode.INTERNAL
 
 
+@pytest.mark.parametrize("fly_fails", [False, True])
+async def test_tomo_flyscan_restores_rotation_speed(
+    RE: RunEngine,
+    kinetix_det_factory: Callable[[int], KinetixDetector],
+    fly_rig: Callable[..., FlyRig],
+    open_fe_shutter: tuple[Shutter, Shutter],
+    monkeypatch: pytest.MonkeyPatch,
+    fly_fails: bool,
+):
+    # The motor's fly prepare leaves VELO at the fly speed (Slack, 2026-10-23).
+    num_projections = 11
+    ktx = kinetix_det_factory(1)
+    rig = fly_rig([ktx])
+    await rig.rot_motor.velocity.set(5.0)
+    if fly_fails:
+        written = {"kinetix1": num_projections}
+        monkeypatch.setattr(flyscans.bps, "fly_stub", _failing_fly_stub(rig, written))
+
+    plan = rig.flyscan(
+        [ktx], open_fe_shutter, num_projections=num_projections, exposure_time=0.01
+    )
+    if fly_fails:
+        with pytest.raises(FailedStatus):
+            RE(plan)
+    else:
+        RE(plan)
+
+    speeds = [c.args[0] for c in get_mock_put(rig.rot_motor.velocity).call_args_list]
+    assert any(speed != 5.0 for speed in speeds)  # the fly prepare changed it
+    assert await rig.rot_motor.velocity.get_value() == 5.0
+
+
 # ==================================================================================
 # Orchestration: tomo_flyscan_loop and the step scans
 # ==================================================================================
