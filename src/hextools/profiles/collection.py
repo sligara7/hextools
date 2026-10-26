@@ -55,6 +55,7 @@ from hextools.motors import (
     move_motor,  # noqa: F401 - operator namespace
 )
 from hextools.photon_delivery_system import *
+from hextools.plan_queue import PlanQueue
 from hextools.suspenders import SuspendFloorUnlessOpsMode
 from hextools.tomography import *
 from hextools.tomography import (
@@ -94,6 +95,10 @@ RE.md["beamline_id"] = "27-ID-1"
 # Log any exception raised during a plan as an error, and every RunEngine state change.
 log_plan_exceptions(RE, logger)
 log_state_changes(RE, logger)
+
+# The session's plan queue, shared by the IPython prompt and the GUI.
+# Created after the RunEngine hooks above, since it wraps RE.state_hook.
+queue = PlanQueue(RE)
 
 # Uncomment if running in the terminal to get progress bars.
 # RE.waiting_hook = ProgressBarManager()  # type: ignore[assignment]

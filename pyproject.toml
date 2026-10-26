@@ -157,6 +157,8 @@ source = ["src", "**/site-packages/"]
 
 [tool.ruff]
 line-length = 88
+# Verbatim copy of bluesky's PlanQueue prototype; kept identical so it can be dropped once bluesky releases it.
+extend-exclude = ["src/hextools/plan_queue.py", "tests/test_plan_queue.py"]
 lint.select = [
     "B",       # flake8-bugbear - https://docs.astral.sh/ruff/rules/#flake8-bugbear-b
     "C4",      # flake8-comprehensions - https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4

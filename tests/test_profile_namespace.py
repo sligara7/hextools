@@ -21,6 +21,7 @@ OPERATOR_NAMES = [
     "call_in_bluesky_event_loop",
     "KinetixDetector",
     "Path",
+    "PlanQueue",
 ]
 
 
