@@ -82,6 +82,7 @@ from hextools.gui.plan_status import (
     QtPlanStatus,
 )
 from hextools.gui.plan_widget import QtPlanWidget
+from hextools.gui.queue_panel import QUEUE_NAME, QtPlanQueuePanel
 from hextools.gui.re_execution_controls import (
     QtReExecutionControls as QtReExecutionControlsLocal,
 )
@@ -98,6 +99,7 @@ from hextools.motors import (
 )
 from hextools.photon_delivery_system import DCLM, Shutter, Slits, change_energy
 from hextools.photon_delivery_system.dclm import change_beam_mode
+from hextools.plan_queue import PlanQueue
 from hextools.settings import (
     apply_device_settings,
     store_device_settings,
@@ -466,6 +468,15 @@ class QtTabbedTechniqueSelector(QWidget, Generic[RunEngineClientT]):
         tabs.addTab(self._edxd, "EDXD")
         self._xrd = QtXRDView(self._re_client)
         tabs.addTab(self._xrd, "XRD")
+        queue = user_ns.get(QUEUE_NAME)
+        if isinstance(re_client, RunEngine) and isinstance(queue, PlanQueue):
+            self.queue_panel = QtPlanQueuePanel(queue)
+            index = tabs.addTab(self.queue_panel, self.queue_panel.title())
+            self.queue_panel.title_changed.connect(
+                lambda title, index=index: tabs.setTabText(index, title)
+            )
+        else:
+            self.queue_panel = None
         self._available_devices = QtAvailableDevices(self._re_client, EXPECTED_DEVICES)
         tabs.addTab(self._available_devices, "Available Devices")
         if self._plan_monitor is not None:

@@ -53,6 +53,7 @@ from qtpy.QtWidgets import (
     QFormLayout,
     QFrame,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -68,7 +69,9 @@ from hextools.gui.device_sources import (
     NamespaceDeviceSource,
     QueueServerDeviceSource,
 )
+from hextools.gui.queue_panel import QUEUE_NAME
 from hextools.log import _unwrap_failed_status
+from hextools.plan_queue import PlanQueue
 
 _NO_SELECTION = "\u2014"  # em dash placeholder for an unset single device
 
@@ -269,6 +272,7 @@ class QtPlanWidget(QWidget):
         super().__init__(parent)
         self._re_client = re_client
         self._plan = plan
+        self._namespace_source: NamespaceDeviceSource | None = None
         if isinstance(re_client, RunEngineClient):
             self._device_source = QueueServerDeviceSource(re_client)
         else:
@@ -278,7 +282,10 @@ class QtPlanWidget(QWidget):
                     "Failed to detect ipython instance, "
                     "required for plan argument validation"
                 )
-            self._device_source = NamespaceDeviceSource(ipython.user_ns)
+            self._device_source = self._namespace_source = NamespaceDeviceSource(
+                ipython.user_ns
+            )
+            self._namespace = ipython.user_ns
         self._worker = None
         self._scalar_fields: list[tuple[str, type, QWidget, bool]] = []
         self._scalar_list_fields: list[tuple[str, type, QWidget, bool]] = []
@@ -311,7 +318,18 @@ class QtPlanWidget(QWidget):
         )
         self._submit_button = QPushButton(button_label)
         self._submit_button.clicked.connect(self._on_submit_clicked)
-        vbox.addWidget(self._submit_button)
+        buttons = QHBoxLayout()
+        buttons.addWidget(self._submit_button)
+        self._queue_button = None
+        if self._namespace_source is not None:
+            self._queue_button = QPushButton("Add to Queue")
+            self._queue_button.setToolTip(
+                f"Append this plan to the session's queue ({QUEUE_NAME}.add); "
+                "run it from the Queue tab."
+            )
+            self._queue_button.clicked.connect(self._on_add_to_queue_clicked)
+            buttons.addWidget(self._queue_button)
+        vbox.addLayout(buttons)
 
         self._status_label = QLabel("")
         self._status_label.setWordWrap(True)
@@ -593,6 +611,33 @@ class QtPlanWidget(QWidget):
             self._run_in_process(kwargs, device_keys)
         else:
             self._submit_to_queue(kwargs)
+
+    def _on_add_to_queue_clicked(self):
+        source = self._namespace_source
+        if source is None:
+            return
+        queue = self._namespace.get(QUEUE_NAME)
+        if not isinstance(queue, PlanQueue):
+            self._set_status(
+                f"No plan queue named '{QUEUE_NAME}' in this session.", error=True
+            )
+            return
+        try:
+            kwargs, device_keys = self._collect_inputs()
+        except ValueError as ex:
+            self._set_status(str(ex), error=True)
+            return
+        # Pass the device objects, not their names: the item runs later, inside
+        # queue.run(), not as a cell.
+        for key in device_keys:
+            value = kwargs[key]
+            kwargs[key] = (
+                [source.get_device(name) for name in value]
+                if isinstance(value, list)
+                else source.get_device(value)
+            )
+        queue.add(self._plan, **kwargs)
+        self._set_status(f"Added to the queue ({len(queue.pending)} pending).")
 
     def _submit_to_queue(self, kwargs: dict):
         item = BPlan(self._plan.__name__, **kwargs)

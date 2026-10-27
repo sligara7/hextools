@@ -206,6 +206,10 @@ class NamespaceDeviceSource(DeviceSource):
             return False
         return self._matches(obj, types)
 
+    def get_device(self, name: str) -> Any:
+        """Return the device at ``name``, a path as given by :meth:`list_devices`."""
+        return _walk_namespace(self._namespace)[name]
+
     @staticmethod
     def _matches(obj: Any, types: tuple[type, ...] | None) -> bool:
         """Check if the object matches the given types or looks like a device.
