@@ -83,6 +83,7 @@ from hextools.gui.plan_status import (
 )
 from hextools.gui.plan_widget import QtPlanWidget
 from hextools.gui.queue_panel import QUEUE_NAME, QtPlanQueuePanel
+from hextools.gui.queue_status import QtQueueStatus
 from hextools.gui.re_execution_controls import (
     QtReExecutionControls as QtReExecutionControlsLocal,
 )
@@ -464,6 +465,12 @@ class QtTabbedTechniqueSelector(QWidget, Generic[RunEngineClientT]):
         )
         if self._plan_monitor is not None:
             controls.addWidget(QtPlanStatus(self._plan_monitor, "hextools"))
+        queue = user_ns.get(QUEUE_NAME)
+        if not (isinstance(re_client, RunEngine) and isinstance(queue, PlanQueue)):
+            queue = None
+        self.queue_status = QtQueueStatus(queue) if queue is not None else None
+        if self.queue_status is not None:
+            controls.addWidget(self.queue_status)
         controls.addStretch()
         if isinstance(re_client, RunEngine) and ipython is not None:
             controls.addWidget(QtShutterStatus(re_client, user_ns))
@@ -481,13 +488,15 @@ class QtTabbedTechniqueSelector(QWidget, Generic[RunEngineClientT]):
         tabs.addTab(self._edxd, "EDXD")
         self._xrd = QtXRDView(self._re_client)
         tabs.addTab(self._xrd, "XRD")
-        queue = user_ns.get(QUEUE_NAME)
-        if isinstance(re_client, RunEngine) and isinstance(queue, PlanQueue):
+        if queue is not None:
             self.queue_panel = QtPlanQueuePanel(queue)
             index = tabs.addTab(self.queue_panel, self.queue_panel.title())
             self.queue_panel.title_changed.connect(
                 lambda title, index=index: tabs.setTabText(index, title)
             )
+            panel = self.queue_panel
+            if self.queue_status is not None:
+                self.queue_status.clicked.connect(lambda: tabs.setCurrentWidget(panel))
         else:
             self.queue_panel = None
         self._available_devices = QtAvailableDevices(self._re_client, EXPECTED_DEVICES)
