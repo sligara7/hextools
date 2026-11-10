@@ -73,6 +73,7 @@ from hextools.utils import (
     reset_scan_id,
     switch_proposal,
 )
+from hextools.xrd import dark_reference, xrd_calibration, xrd_scan, xrd_scan_2d
 
 
 def _shutters(re, namespace):
@@ -191,14 +192,6 @@ def _default_plan_history_file() -> Path:
     return state_home / "hextools" / filename
 
 
-def _nxs_export():
-    from hextools.gui.auto_exporter_view import QtAutoExporterView
-
-    return QtAutoExporterView(
-        "hextools.exporters.auto_exporter", autostart=not is_running_in_ci()
-    )
-
-
 HEX_GUI = GuiSpec(
     name="HEX",
     techniques=[
@@ -217,10 +210,13 @@ HEX_GUI = GuiSpec(
                 ("Apply Settings", apply_device_settings),
             ],
             detectors=[
-                DetectorView("fs_window_cam", "XF:27IDA-BI{FS:1-Cam:1}"),
-                DetectorView("diamond_window_cam", "XF:27IDA-BI{FAM:1-Cam:1}"),
-                DetectorView("sample_cam", "XF:27ID1-ES{Sample-Cam:1}"),
-                DetectorView("f_hutch_cam", "XF:27IDA-BI{GigE-Cam:5}"),
+                DetectorView(name, prefix, {"preserve_aspect_ratio": True})
+                for name, prefix in (
+                    ("fs_window_cam", "XF:27IDA-BI{FS:1-Cam:1}"),
+                    ("diamond_window_cam", "XF:27IDA-BI{FAM:1-Cam:1}"),
+                    ("sample_cam", "XF:27ID1-ES{Sample-Cam:1}"),
+                    ("f_hutch_cam", "XF:27IDA-BI{GigE-Cam:5}"),
+                )
             ],
         ),
         Technique(
@@ -235,19 +231,39 @@ HEX_GUI = GuiSpec(
                 ("Alignment", tomo_alignment_scan),
             ],
             detectors=[
+                *(
+                    DetectorView(
+                        f"kinetix{i}",
+                        "XF:27ID1-BI{Kinetix-Det:" + str(i) + "}",
+                        {"show_profile_lines": True, "preserve_aspect_ratio": True},
+                    )
+                    for i in range(1, 5)
+                ),
                 DetectorView(
-                    f"kinetix{i}",
-                    "XF:27ID1-BI{Kinetix-Det:" + str(i) + "}",
-                    {"show_profile_lines": True},
-                )
-                for i in range(1, 5)
+                    "phantom",
+                    "XF:27ID1-ES{Phantom-Det:1}",
+                    {"show_profile_lines": True, "preserve_aspect_ratio": True},
+                ),
             ],
             combined=[("Dual Cam", ["kinetix1", "kinetix3"])],
         ),
         Technique("EDXD", widget_factory=_build_edxd_view),
         Technique(
             "XRD",
-            detectors=[DetectorView("perkin_elmer", "XF:27ID1-ES{PE-Det:1}")],
+            plans=[
+                ("Dark Reference", dark_reference),
+                ("Calibration", xrd_calibration),
+                ("Scan", xrd_scan),
+                ("2D Scan", xrd_scan_2d),
+                ("Radiography", take_radiograph),
+            ],
+            detectors=[
+                DetectorView(
+                    "perkin_elmer",
+                    "XF:27ID1-ES{PE-Det:1}",
+                    {"preserve_aspect_ratio": True},
+                )
+            ],
         ),
     ],
     # Names must match those defined in the profile / Queue Server namespace.
@@ -276,13 +292,11 @@ HEX_GUI = GuiSpec(
     logger_name="hextools",
     run_specs=ALL_SPECS,
     status_widgets=[_shutters],
-    extra_tabs=[("NXS Export", _nxs_export)],
     proposals=ProposalBackend(
         list_proposals=list_proposals,
         get_proposal_info=get_proposal_info,
         switch_proposal=switch_proposal,
-        # Outside mock mode RE.md is Redis-backed, so a switch reaches the worker.
-        md_is_shared=lambda: not is_running_in_ci(),
+        is_mock=is_running_in_ci,
     ),
     site=Site(
         "Upton, NY", latitude=40.8677, longitude=-72.8814, timezone="America/New_York"

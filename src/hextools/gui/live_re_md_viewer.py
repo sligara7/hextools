@@ -219,7 +219,7 @@ class QtProposalInfo(QtReMetadataMonitor):
             )
         md = dict(response.get("re_metadata") or {})
         updated = backend.switch_proposal(proposal, username, password, md=md)
-        if not backend.md_is_shared():
+        if backend.is_mock():
             keys = ("data_session", "username", "start_datetime", "proposal")
             changes = {k: updated[k] for k in keys if k in updated}
             client.script_upload(f"RE.md.update({changes!r})")

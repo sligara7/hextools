@@ -53,14 +53,15 @@ class Site:
 class ProposalBackend:
     """The facility's proposal system, for the Proposal Info box.
 
-    ``md_is_shared`` says whether a switch made on a copy of the RunEngine
-    metadata already reaches the Queue Server worker (e.g. Redis-backed).
+    ``is_mock`` says whether the session runs in mock mode, where RE.md is not
+    shared (not Redis-backed): a switch made over the Queue Server is then also
+    written into the worker's RE.md directly.
     """
 
     list_proposals: Callable[[], Mapping[str, Sequence[tuple[str, str]]]]
     get_proposal_info: Callable[[str], Mapping[str, Any]]
     switch_proposal: Callable[..., Mapping[str, Any]]
-    md_is_shared: Callable[[], bool] = lambda: True
+    is_mock: Callable[[], bool] = lambda: False
 
 
 @dataclass(frozen=True)
@@ -78,8 +79,8 @@ class GuiSpec:
     logger_name : str
         Logger whose records the Plan Status and Log views show.
     run_specs : sequence
-        Tiled specs offered by the Scan Browser. Without specs the browser is
-        omitted, even when the profile provides a catalog.
+        Tiled specs offered by the Scan Browser after ``BlueskyRun``, which
+        every run has and which is always offered.
     status_widgets : sequence of callables
         Extra boxes for the top row in local mode, each built as
         ``factory(run_engine, namespace)``.

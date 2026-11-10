@@ -43,7 +43,7 @@ def test_command_line_overrides_base_environment(monkeypatch, tmp_path, mock, hi
 
 @pytest.mark.parametrize("client_name", ["c", "tiled_reading_client"])
 @pytest.mark.parametrize("run_specs", [(), (Spec("synthetic-run"),)])
-def test_scan_browser_requires_run_specs(monkeypatch, RE, client_name, run_specs):
+def test_scan_browser_offers_bluesky_run_first(monkeypatch, RE, client_name, run_specs):
     app = QApplication.instance() or QApplication([])
     shell = InteractiveShell.instance()
     monkeypatch.setitem(shell.user_ns, client_name, object())
@@ -51,12 +51,12 @@ def test_scan_browser_requires_run_specs(monkeypatch, RE, client_name, run_specs
         RE, GuiSpec(name="Synthetic", techniques=(), run_specs=run_specs)
     )
     try:
-        if run_specs:
-            assert selector.scan_browser is not None
-            assert selector.scan_browser._spec_combo.count() == 1
-            assert selector.scan_browser._spec_combo.currentText() == "synthetic-run"
-        else:
-            assert selector.scan_browser is None
+        assert selector.scan_browser is not None
+        combo = selector.scan_browser._spec_combo
+        assert [combo.itemText(i) for i in range(combo.count())] == [
+            "BlueskyRun",
+            *(spec.name for spec in run_specs),
+        ]
     finally:
         selector.close()
         app.processEvents()

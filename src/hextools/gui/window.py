@@ -46,6 +46,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from tiled.structures.core import Spec
 
 from hextools.gui._hook_chain import install_hook, uninstall_hook
 from hextools.gui._theme import apply_bnl_theme, saved_theme, set_settings_scope
@@ -204,19 +205,18 @@ class QtTabbedTechniqueSelector(QWidget, Generic[RunEngineClientT]):
         tabs.addTab(self._available_devices, "Available Devices")
         if self._plan_monitor is not None:
             execution_view = QtPlanExecutionView(self._plan_monitor, spec.logger_name)
+            tabs.addTab(execution_view, "Plan Execution")
             tiled_client = user_ns.get("tiled_reading_client") or user_ns.get("c")
-            if (
-                tiled_client is not None
-                and isinstance(re_client, RunEngine)
-                and spec.run_specs
-            ):
+            if tiled_client is not None:
+                # Every run has the BlueskyRun spec, so selecting it finds all runs.
                 self.scan_browser = QtScanBrowser(
-                    tiled_client, list(spec.run_specs), re_client
+                    tiled_client,
+                    [Spec("BlueskyRun", version="3.0"), *spec.run_specs],
+                    re_client,
                 )
-                execution_view.add_tab(self.scan_browser, "Scan Browser")
+                tabs.addTab(self.scan_browser, "Scan Browser")
             else:
                 self.scan_browser = None
-            tabs.addTab(execution_view, "Plan Execution")
             self.plan_history = QtPlanHistory(
                 self._plan_monitor,
                 history_file=os.environ.get(spec.plan_history_env)
@@ -512,9 +512,7 @@ class QtDataAcquisitionWindow:
 
     def show(self):
         """Resize, show, and bring forward the window."""
-        window_layout = self._qt_window.layout()
-        if window_layout is not None:
-            self._qt_window.resize(window_layout.sizeHint())
+        self._qt_window.resize(1650, 1280)
         self._qt_window.show()
 
         # We want to call Window._qt_window.raise_() in every case *except*
